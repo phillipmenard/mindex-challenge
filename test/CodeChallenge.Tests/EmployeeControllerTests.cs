@@ -1,4 +1,5 @@
 
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -10,6 +11,7 @@ using CodeCodeChallenge.Tests.Integration.Extensions;
 using CodeCodeChallenge.Tests.Integration.Helpers;
 using FluentAssertions;
 using FluentAssertions.Execution;
+using Microsoft.VisualBasic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CodeCodeChallenge.Tests.Integration
@@ -276,6 +278,59 @@ namespace CodeCodeChallenge.Tests.Integration
 
             structure.Employee.DirectReports
                 .All(e => e.DirectReports == null).Should().BeTrue("because we limited depth.");
+        }
+
+        [TestMethod]
+        public void GetCompensation_Returns_NotFound()
+        {
+            // Arrange
+            // Unknown employeeId:
+            var employeeId = "39AD864F-BBB4-4D65-80E7-0AC9244A29B5";
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/compensation");
+            var response = getRequestTask.Result;
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound, "because we did not find the employeeId.");
+        }
+
+        [TestMethod]
+        public void GetCompensation_Returns_NoCompensation()
+        {
+            // Arrange
+            // Unknown employeeId:
+            var employeeId = "62c1084e-6e34-4630-93fd-9153afb65309";
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/compensation");
+            var response = getRequestTask.Result;
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound, "because we have not created any compensation record.");
+            response.Content.ReadAsStringAsync().Result
+                .Should().Be("Employee exists, but compensation negotiations have failed.");
+        }
+
+        [TestMethod]
+        [DataRow("16a596ae-edd3-4847-99fe-c4518e82c86f", 1000000, "1963-03-22", DisplayName = "Lennon, John")]
+        [DataRow("b7839309-3348-463b-a7e3-5de1c168beb3", 999999, "1963-03-22", DisplayName = "McCartney, Paul")]
+        public void GetCompensation_Returns_Compensation(string employeeId, int expectedSalary, string expectedEffDate)
+        {
+            // Arrange
+            // Nothing to arrange here.
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/compensation");
+            var response = getRequestTask.Result;
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employee and at least one compensation record.");
+            var compensation = response.DeserializeContent<Compensation>();
+            compensation.Employee.Should().NotBeNull();
+            compensation.Employee.EmployeeId.Should().Be(employeeId);
+            compensation.Salary.Should().Be(expectedSalary);
+            compensation.EffectiveDate.Should().Be(DateTime.Parse(expectedEffDate));
         }
     }
 }

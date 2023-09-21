@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CodeChallenge.Models
 {
@@ -13,5 +11,10 @@ namespace CodeChallenge.Models
         public String Position { get; set; }
         public String Department { get; set; }
         public List<Employee> DirectReports { get; set; }
+
+        /// <summary>
+        /// This employee's compensation history.
+        /// </summary>
+        public List<Compensation> Compensation { get; set; }
     }
 }

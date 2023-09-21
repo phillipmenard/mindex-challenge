@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using CodeChallenge.Services;
 using CodeChallenge.Models;
+using System.Linq;
 
 namespace CodeChallenge.Controllers
 {
@@ -97,6 +98,38 @@ namespace CodeChallenge.Controllers
             }
 
             return Ok(new ReportingStructure(employee, count, isTruncated));
+        }
+
+        /// <summary>
+        /// Retrieves the current compensation package of employee.EmployeeId = id.
+        /// </summary>
+        /// <param name="id">EmployeeId to retrieve.</param>
+        /// <returns><see cref="Compensation"/></returns>
+        [HttpGet("{id}/compensation", Name = "getEmployeeCompensation")]
+        public IActionResult GetCompensation(String id)
+        {
+            _logger.LogDebug($"Received request for employee compensation for '{id}'");
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest("id is required");
+            }
+
+            var employee = _employeeService.GetById(id, nameof(Employee.Compensation));
+            if (employee == null)
+            {
+                return NotFound();
+            }
+
+            if (!employee.Compensation.Any())
+            {
+                return NotFound("Employee exists, but compensation negotiations have failed.");
+            }
+            var comp = employee.Compensation.OrderBy(c => c.EffectiveDate).Last();
+
+            // ensure we don't recurse during JSON output
+            comp.Employee.Compensation = null;
+
+            return Ok(comp);
         }
 
         /// <summary>

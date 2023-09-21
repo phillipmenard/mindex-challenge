@@ -12,6 +12,16 @@
       {
         "employeeId": "03aa1462-ffa9-4978-901b-7c001562cf6f"
       }
+    ],
+    "compensation": [
+      {
+        "salary": 1000000,
+        "effectiveDate": "1963-03-22"
+      },
+      {
+        "salary": 1000,
+        "effectiveDate": "1960-01-01"
+      }
     ]
   },
   {
@@ -19,7 +29,17 @@
     "firstName": "Paul",
     "lastName": "McCartney",
     "position": "Developer I",
-    "department": "Engineering"
+    "department": "Engineering",
+    "compensation": [
+      {
+        "salary": 999999,
+        "effectiveDate": "1963-03-22"
+      },
+      {
+        "salary": 1000,
+        "effectiveDate": "1960-01-01"
+      }
+    ]
   },
   {
     "employeeId": "03aa1462-ffa9-4978-901b-7c001562cf6f",

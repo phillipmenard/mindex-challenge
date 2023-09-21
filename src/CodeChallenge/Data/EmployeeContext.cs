@@ -1,9 +1,5 @@
 ﻿using CodeChallenge.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CodeChallenge.Data
 {
@@ -15,5 +11,19 @@ namespace CodeChallenge.Data
         }
 
         public DbSet<Employee> Employees { get; set; }
+
+        /// <summary>
+        /// Compensation data for employees.
+        /// </summary>
+        /// <remarks>
+        /// Many compensation records may exist for any given Employee.
+        /// </remarks>
+        public DbSet<Compensation> Compensation { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Compensation>()
+                .HasKey("EmployeeId", "EffectiveDate");
+        }
     }
 }
