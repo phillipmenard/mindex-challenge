@@ -22,5 +22,13 @@ namespace CodeChallenge.Services
         Employee GetById(String id, params string[] additionalFields);
         Employee Create(Employee employee);
         Employee Replace(Employee originalEmployee, Employee newEmployee);
+
+        /// <summary>
+        /// Creates a new compensation row, or updates the salary of an
+        /// existing row based on matching employee id + effective date.
+        /// </summary>
+        /// <param name="compensation">Record to add.</param>
+        /// <returns>Updated <see cref="Compensation"/>.</returns>
+        Compensation AddOrUpdateCompensation(Compensation compensation);
     }
 }

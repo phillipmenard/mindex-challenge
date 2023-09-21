@@ -133,6 +133,38 @@ namespace CodeChallenge.Controllers
         }
 
         /// <summary>
+        /// Retrieves the current compensation package of employee.EmployeeId = id.
+        /// </summary>
+        /// <param name="id">EmployeeId to retrieve.</param>
+        /// <returns><see cref="Compensation"/></returns>
+        [HttpPut("{id}/compensation", Name = "putEmployeeCompensation")]
+        public IActionResult PutCompensation(String id, [FromBody] Compensation compensation)
+        {
+            _logger.LogDebug($"Received request for employee compensation for '{id}'");
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest("id is required");
+            }
+
+            if (compensation == null)
+            {
+                return BadRequest("compensation is required");
+            }
+
+            var employee = _employeeService.GetById(id, nameof(Employee.Compensation));
+            if (employee == null)
+            {
+                return NotFound();
+            }
+
+            // ensure employee is populated.
+            compensation.Employee = employee;
+            _employeeService.AddOrUpdateCompensation(compensation);
+
+            return Ok();
+        }
+
+        /// <summary>
         /// Counts each employee starting at the provided employee (so result is >=1)
         ///  and all DirectReports recursively from there.
         /// </summary>

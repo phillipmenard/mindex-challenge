@@ -49,6 +49,25 @@ namespace CodeChallenge.Repositories
             return employees.SingleOrDefault(e => e.EmployeeId == id);
         }
 
+        /// <inheritdoc/>
+        public Compensation AddOrUpdate(Compensation compensation)
+        {
+            var existing = _employeeContext.Compensation
+                .FirstOrDefault(
+                    c => c.Employee.EmployeeId == compensation.Employee.EmployeeId
+                    && c.EffectiveDate == compensation.EffectiveDate);
+            if (existing == null)
+            {
+                _employeeContext.Compensation.Add(compensation);
+                return compensation;
+            }
+            else
+            {
+                existing.Salary = compensation.Salary;
+                return compensation;
+            }
+        }
+
         public Task SaveAsync()
         {
             return _employeeContext.SaveChangesAsync();

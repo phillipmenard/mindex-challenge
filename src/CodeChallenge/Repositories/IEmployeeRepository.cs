@@ -24,6 +24,14 @@ namespace CodeChallenge.Repositories
         Employee GetById(String id, params string[] additionalFields);
         Employee Add(Employee employee);
         Employee Remove(Employee employee);
+
+        /// <summary>
+        /// Creates a new compensation record or updates an existing one.
+        /// </summary>
+        /// <param name="compensation">Record to create or update.</param>
+        /// <returns>Final value.</returns>
+        Compensation AddOrUpdate(Compensation compensation);
+
         Task SaveAsync();
     }
 }

@@ -2,6 +2,7 @@
 using CodeChallenge.Models;
 using Microsoft.Extensions.Logging;
 using CodeChallenge.Repositories;
+using System.Transactions;
 
 namespace CodeChallenge.Services
 {
@@ -65,6 +66,23 @@ namespace CodeChallenge.Services
             }
 
             return newEmployee;
+        }
+
+        public Compensation AddOrUpdateCompensation(Compensation compensation)
+        {
+            if (compensation == null)
+            {
+                throw new ArgumentNullException(nameof(compensation));
+            }
+
+            Compensation result;
+            using (var txnScope = new TransactionScope(TransactionScopeOption.Required))
+            {
+                result = _employeeRepository.AddOrUpdate(compensation);
+                _employeeRepository.SaveAsync().GetAwaiter().GetResult();
+            }
+
+            return result;
         }
     }
 }

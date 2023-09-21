@@ -332,5 +332,65 @@ namespace CodeCodeChallenge.Tests.Integration
             compensation.Salary.Should().Be(expectedSalary);
             compensation.EffectiveDate.Should().Be(DateTime.Parse(expectedEffDate));
         }
+
+        [TestMethod]
+        public void PutCompensation_Adds_Compensation()
+        {
+            // Arrange
+            var employeeId = "16a596ae-edd3-4847-99fe-c4518e82c86f"; //John
+            var salary = 2000000;
+            var effectiveDate = new DateTime(1963, 11, 22);
+            var comp = new Compensation() { Salary = salary, EffectiveDate = effectiveDate };
+            var requestContent = new JsonSerialization().ToJson(comp);
+
+            // Execute
+            var putRequestTask = _httpClient.PutAsync($"api/employee/{employeeId}/compensation",
+                new StringContent(requestContent, Encoding.UTF8, "application/json"));
+
+            var response = putRequestTask.Result;
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK, "because we applied the add.");
+
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/compensation");
+            response = getRequestTask.Result;
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employee and at least one compensation record.");
+            var compensation = response.DeserializeContent<Compensation>();
+            compensation.Employee.Should().NotBeNull();
+            compensation.Employee.EmployeeId.Should().Be(employeeId);
+            compensation.Salary.Should().Be(salary);
+            compensation.EffectiveDate.Should().Be(effectiveDate);
+        }
+
+        [TestMethod]
+        public void PutCompensation_Updates_Compensation()
+        {
+            // Arrange
+            var employeeId = "b7839309-3348-463b-a7e3-5de1c168beb3"; //Paul
+            var salary = 1000000; //Sorry Paul, we really didn't mean to slight you.
+            var effectiveDate = new DateTime(1963, 03, 22);
+            var comp = new Compensation() { Salary = salary, EffectiveDate = effectiveDate };
+            var requestContent = new JsonSerialization().ToJson(comp);
+
+            // Execute
+            var putRequestTask = _httpClient.PutAsync($"api/employee/{employeeId}/compensation",
+                new StringContent(requestContent, Encoding.UTF8, "application/json"));
+
+            var response = putRequestTask.Result;
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK, "because we applied the add.");
+
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/compensation");
+            response = getRequestTask.Result;
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employee and at least one compensation record.");
+            var compensation = response.DeserializeContent<Compensation>();
+            compensation.Employee.Should().NotBeNull();
+            compensation.Employee.EmployeeId.Should().Be(employeeId);
+            compensation.Salary.Should().Be(salary);
+            compensation.EffectiveDate.Should().Be(effectiveDate);
+        }
     }
 }
