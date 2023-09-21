@@ -61,9 +61,10 @@ namespace CodeChallenge.Controllers
         /// </summary>
         /// <param name="id">EmployeeId to start with.</param>
         /// <param name="maxDepth">Maximum depth to walk to retrieve the information.</param>
+        /// <param name="includeStructure">If true, Employee.DirectReports will be populated (within maxDepth).</param>
         /// <returns><see cref="ReportingStructure"/></returns>
         [HttpGet("{id}/structure", Name = "getEmployeeReportingStructure")]
-        public IActionResult GetReportingStructure(String id, int maxDepth = 5)
+        public IActionResult GetReportingStructure(String id, int maxDepth = 5, bool includeStructure = false)
         {
             _logger.LogDebug($"Received request for employee reporting structure for '{id}'");
             if (string.IsNullOrWhiteSpace(id))
@@ -85,14 +86,15 @@ namespace CodeChallenge.Controllers
                 return NotFound();
             }
 
-            var isTruncated = !this.TryCountReports(employee, maxDepth, 1, out var count);
+            var isTruncated = !this.TryCountReports(employee, maxDepth, 1, includeStructure, out var count);
 
             // Count includes "self", so remove the top employee from the count.
             count--;
 
-            // For now we'll exclude the actual structure as a plausible size concern.
-            // It was not requested explicitly in the work request.
-            employee.DirectReports = null;
+            if (!includeStructure)
+            {
+                employee.DirectReports = null;
+            }
 
             return Ok(new ReportingStructure(employee, count, isTruncated));
         }
@@ -103,7 +105,7 @@ namespace CodeChallenge.Controllers
         /// </summary>
         /// <param name="employee"></param>
         /// <returns>False if truncated due to depth.</returns>
-        private bool TryCountReports(Employee employee, int maxDepth, int depth, out int count)
+        private bool TryCountReports(Employee employee, int maxDepth, int depth, bool includeStructure, out int count)
         {
             // count self:
             count = 1;
@@ -117,18 +119,27 @@ namespace CodeChallenge.Controllers
             //Enrich employees, as needed
             if (employee.DirectReports == null)
             {
-                employee = _employeeService.GetById(employee.EmployeeId, nameof(Employee.DirectReports));
+                var tmp = _employeeService.GetById(employee.EmployeeId, nameof(Employee.DirectReports));
+                employee.DirectReports = tmp.DirectReports;
             }
 
+            // This could be done in a parallel loop, if locking is not a concern.
             var result = true;
             foreach(var subordinate in employee.DirectReports)
             {
-                if (!this.TryCountReports(subordinate, maxDepth, depth+1, out var subCount))
+                if (!this.TryCountReports(subordinate, maxDepth, depth+1, includeStructure, out var subCount))
                 {
                     result = false;
                 }
                 count += subCount;
             }
+
+            if (!includeStructure)
+            {
+                //Minimize memory load
+                employee.DirectReports = null;
+            }
+
             return result;
         }
     }

@@ -1,4 +1,5 @@
 
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -185,6 +186,7 @@ namespace CodeCodeChallenge.Tests.Integration
             response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employeeId.");
             var structure = response.DeserializeContent<ReportingStructure>();
             structure.Employee.EmployeeId.Should().Be(employeeId, "because this was the requested employee.");
+            structure.Employee.DirectReports.Should().BeNull("because we did not request the structure.");
             structure.NumberOfReports.Should().Be(expectedCount, "because that is total number of reports in the test data.");
             structure.IsTruncated.Should().BeFalse("because the data has less depth than the default limit.");
         }
@@ -214,8 +216,66 @@ namespace CodeCodeChallenge.Tests.Integration
             response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employeeId.");
             var structure = response.DeserializeContent<ReportingStructure>();
             structure.Employee.EmployeeId.Should().Be(employeeId, "because this was the requested employee.");
+            structure.Employee.DirectReports.Should().BeNull("because we did not request the structure.");
             structure.NumberOfReports.Should().Be(expectedCount, "because that is total number of reports in the test data.");
             structure.IsTruncated.Should().Be(expectedIsTruncated, "because the data has more ore less depth than the provided limit.");
+        }
+
+        [TestMethod]
+        public void GetReportingStructure_Returns_Tree()
+        {
+            // Arrange
+            var employeeId = "16a596ae-edd3-4847-99fe-c4518e82c86f";
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure?includeStructure=true");
+            var response = getRequestTask.Result;
+
+            // Assert
+            using var scope = new AssertionScope();
+            response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employeeId.");
+            var structure = response.DeserializeContent<ReportingStructure>();
+            structure.Employee.EmployeeId.Should().Be(employeeId, "because this was the requested employee.");
+
+            var lennonsReports = structure.Employee.DirectReports.Select(d => d.EmployeeId).ToList();
+            lennonsReports.Should().BeEquivalentTo(
+                new[] { "03aa1462-ffa9-4978-901b-7c001562cf6f", "b7839309-3348-463b-a7e3-5de1c168beb3" },
+                options => options.WithoutStrictOrdering());
+
+            var ringosReports = structure.Employee.DirectReports?
+                .First(d => d.EmployeeId == "03aa1462-ffa9-4978-901b-7c001562cf6f")
+                .DirectReports?
+                .Select(d => d.EmployeeId)
+                .ToList();
+
+            ringosReports.Should().BeEquivalentTo(
+                new[] { "c0c2293d-16bd-4603-8e08-638a9d18b22c", "62c1084e-6e34-4630-93fd-9153afb65309" },
+                options => options.WithoutStrictOrdering());
+        }
+
+        [TestMethod]
+        public void GetReportingStructure_Returns_TruncatedTree()
+        {
+            // Arrange
+            var employeeId = "16a596ae-edd3-4847-99fe-c4518e82c86f";
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure?includeStructure=true&maxDepth=1");
+            var response = getRequestTask.Result;
+
+            // Assert
+            using var scope = new AssertionScope();
+            response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employeeId.");
+            var structure = response.DeserializeContent<ReportingStructure>();
+            structure.Employee.EmployeeId.Should().Be(employeeId, "because this was the requested employee.");
+
+            var lennonsReports = structure.Employee.DirectReports.Select(d => d.EmployeeId).ToList();
+            lennonsReports.Should().BeEquivalentTo(
+                new[] { "03aa1462-ffa9-4978-901b-7c001562cf6f", "b7839309-3348-463b-a7e3-5de1c168beb3" },
+                options => options.WithoutStrictOrdering());
+
+            structure.Employee.DirectReports
+                .All(e => e.DirectReports == null).Should().BeTrue("because we limited depth.");
         }
     }
 }
