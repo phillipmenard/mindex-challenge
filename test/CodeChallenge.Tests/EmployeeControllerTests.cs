@@ -1,17 +1,14 @@
-
 using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-
 using CodeChallenge.Models;
-
+using CodeChallenge.Tests.Integration.Extensions;
 using CodeCodeChallenge.Tests.Integration.Extensions;
 using CodeCodeChallenge.Tests.Integration.Helpers;
 using FluentAssertions;
 using FluentAssertions.Execution;
-using Microsoft.VisualBasic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CodeCodeChallenge.Tests.Integration
@@ -147,12 +144,12 @@ namespace CodeCodeChallenge.Tests.Integration
             var employeeId = "16a596ae-edd3-4847-99fe-c4518e82c86f";
 
             // Execute
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure?maxDepth={maxDepth}");
-            var response = getRequestTask.Result;
+            var response = _httpClient.GetAsync($"api/employee/{employeeId}/structure?maxDepth={maxDepth}")
+                .GetAwaiter().GetResult();
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest, "because we provided an invalid argument value.");
-            response.Content.ReadAsStringAsync().Result.Should().Be("maxDepth must be between 1 and 10, inclusive.");
+            response.Content.ReadAsString().Should().Be("maxDepth must be between 1 and 10, inclusive.");
         }
 
         [TestMethod]
@@ -163,8 +160,8 @@ namespace CodeCodeChallenge.Tests.Integration
             var employeeId = "39AD864F-BBB4-4D65-80E7-0AC9244A29B5";
 
             // Execute
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure");
-            var response = getRequestTask.Result;
+            var response = _httpClient.GetAsync($"api/employee/{employeeId}/structure")
+                .GetAwaiter().GetResult();
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.NotFound, "because we did not find the employeeId.");
@@ -180,8 +177,8 @@ namespace CodeCodeChallenge.Tests.Integration
             // Nothing to arrange here.
 
             // Execute
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure");
-            var response = getRequestTask.Result;
+            var response = _httpClient.GetAsync($"api/employee/{employeeId}/structure")
+                .GetAwaiter().GetResult();
 
             // Assert
             using var scope = new AssertionScope();
@@ -210,8 +207,8 @@ namespace CodeCodeChallenge.Tests.Integration
             // Nothing to arrange here.
 
             // Execute
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure?maxDepth={maxDepth}");
-            var response = getRequestTask.Result;
+            var response = _httpClient.GetAsync($"api/employee/{employeeId}/structure?maxDepth={maxDepth}")
+                .GetAwaiter().GetResult();
 
             // Assert
             using var scope = new AssertionScope();
@@ -230,8 +227,8 @@ namespace CodeCodeChallenge.Tests.Integration
             var employeeId = "16a596ae-edd3-4847-99fe-c4518e82c86f";
 
             // Execute
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure?includeStructure=true");
-            var response = getRequestTask.Result;
+            var response = _httpClient.GetAsync($"api/employee/{employeeId}/structure?includeStructure=true")
+                .GetAwaiter().GetResult();
 
             // Assert
             using var scope = new AssertionScope();
@@ -262,8 +259,8 @@ namespace CodeCodeChallenge.Tests.Integration
             var employeeId = "16a596ae-edd3-4847-99fe-c4518e82c86f";
 
             // Execute
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure?includeStructure=true&maxDepth=1");
-            var response = getRequestTask.Result;
+            var response = _httpClient.GetAsync($"api/employee/{employeeId}/structure?includeStructure=true&maxDepth=1")
+                .GetAwaiter().GetResult();
 
             // Assert
             using var scope = new AssertionScope();
@@ -288,8 +285,8 @@ namespace CodeCodeChallenge.Tests.Integration
             var employeeId = "39AD864F-BBB4-4D65-80E7-0AC9244A29B5";
 
             // Execute
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/compensation");
-            var response = getRequestTask.Result;
+            var response = _httpClient.GetAsync($"api/employee/{employeeId}/compensation")
+                .GetAwaiter().GetResult();
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.NotFound, "because we did not find the employeeId.");
@@ -303,12 +300,12 @@ namespace CodeCodeChallenge.Tests.Integration
             var employeeId = "62c1084e-6e34-4630-93fd-9153afb65309";
 
             // Execute
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/compensation");
-            var response = getRequestTask.Result;
+            var response = _httpClient.GetAsync($"api/employee/{employeeId}/compensation")
+                .GetAwaiter().GetResult();
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.NotFound, "because we have not created any compensation record.");
-            response.Content.ReadAsStringAsync().Result
+            response.Content.ReadAsString()
                 .Should().Be("Employee exists, but compensation negotiations have failed.");
         }
 
@@ -321,8 +318,8 @@ namespace CodeCodeChallenge.Tests.Integration
             // Nothing to arrange here.
 
             // Execute
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/compensation");
-            var response = getRequestTask.Result;
+            var response = _httpClient.GetAsync($"api/employee/{employeeId}/compensation")
+                .GetAwaiter().GetResult();
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employee and at least one compensation record.");
@@ -341,18 +338,15 @@ namespace CodeCodeChallenge.Tests.Integration
             var salary = 2000000;
             var effectiveDate = new DateTime(1963, 11, 22);
             var comp = new Compensation() { Salary = salary, EffectiveDate = effectiveDate };
-            var requestContent = new JsonSerialization().ToJson(comp);
 
             // Execute
-            var putRequestTask = _httpClient.PutAsync($"api/employee/{employeeId}/compensation",
-                new StringContent(requestContent, Encoding.UTF8, "application/json"));
-
-            var response = putRequestTask.Result;
+            var response = _httpClient.PutJsonAsync($"api/employee/{employeeId}/compensation", comp)
+                .GetAwaiter().GetResult();
 
             response.StatusCode.Should().Be(HttpStatusCode.OK, "because we applied the add.");
 
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/compensation");
-            response = getRequestTask.Result;
+            response = _httpClient.GetAsync($"api/employee/{employeeId}/compensation")
+                .GetAwaiter().GetResult();
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employee and at least one compensation record.");
@@ -371,18 +365,15 @@ namespace CodeCodeChallenge.Tests.Integration
             var salary = 1000000; //Sorry Paul, we really didn't mean to slight you.
             var effectiveDate = new DateTime(1963, 03, 22);
             var comp = new Compensation() { Salary = salary, EffectiveDate = effectiveDate };
-            var requestContent = new JsonSerialization().ToJson(comp);
 
             // Execute
-            var putRequestTask = _httpClient.PutAsync($"api/employee/{employeeId}/compensation",
-                new StringContent(requestContent, Encoding.UTF8, "application/json"));
-
-            var response = putRequestTask.Result;
+            var response = _httpClient.PutJsonAsync($"api/employee/{employeeId}/compensation", comp)
+                .GetAwaiter().GetResult();
 
             response.StatusCode.Should().Be(HttpStatusCode.OK, "because we applied the add.");
 
-            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/compensation");
-            response = getRequestTask.Result;
+            response = _httpClient.GetAsync($"api/employee/{employeeId}/compensation")
+                .GetAwaiter().GetResult();
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employee and at least one compensation record.");
