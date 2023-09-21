@@ -7,7 +7,8 @@ using CodeChallenge.Models;
 
 using CodeCodeChallenge.Tests.Integration.Extensions;
 using CodeCodeChallenge.Tests.Integration.Helpers;
-
+using FluentAssertions;
+using FluentAssertions.Execution;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CodeCodeChallenge.Tests.Integration
@@ -131,6 +132,90 @@ namespace CodeCodeChallenge.Tests.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [TestMethod]
+        [DataRow(0)]
+        [DataRow(11)]
+        public void GetReportingStructure_Returns_BadRequest(int maxDepth)
+        {
+            // Arrange
+            // Unknown employeeId:
+            var employeeId = "16a596ae-edd3-4847-99fe-c4518e82c86f";
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure?maxDepth={maxDepth}");
+            var response = getRequestTask.Result;
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest, "because we provided an invalid argument value.");
+            response.Content.ReadAsStringAsync().Result.Should().Be("maxDepth must be between 1 and 10, inclusive.");
+        }
+
+        [TestMethod]
+        public void GetReportingStructure_Returns_NotFound()
+        {
+            // Arrange
+            // Unknown employeeId:
+            var employeeId = "39AD864F-BBB4-4D65-80E7-0AC9244A29B5";
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure");
+            var response = getRequestTask.Result;
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound, "because we did not find the employeeId.");
+        }
+
+        [TestMethod]
+        [DataRow("16a596ae-edd3-4847-99fe-c4518e82c86f", 4, DisplayName = "Lennon, John")]
+        [DataRow("b7839309-3348-463b-a7e3-5de1c168beb3", 0, DisplayName = "McCartney, Paul")]
+        [DataRow("03aa1462-ffa9-4978-901b-7c001562cf6f", 2, DisplayName = "Ringo, Starr")]
+        public void GetReportingStructure_Returns_OK(string employeeId, int expectedCount)
+        {
+            // Arrange
+            // Nothing to arrange here.
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure");
+            var response = getRequestTask.Result;
+
+            // Assert
+            using var scope = new AssertionScope();
+            response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employeeId.");
+            var structure = response.DeserializeContent<ReportingStructure>();
+            structure.Employee.EmployeeId.Should().Be(employeeId, "because this was the requested employee.");
+            structure.NumberOfReports.Should().Be(expectedCount, "because that is total number of reports in the test data.");
+            structure.IsTruncated.Should().BeFalse("because the data has less depth than the default limit.");
+        }
+
+        [TestMethod]
+        [DataRow("16a596ae-edd3-4847-99fe-c4518e82c86f", 3, 4, false, DisplayName = "Lennon, John - depth:3")]
+        // This data point may seem counter-intuitive: the maxDepth is sufficient, but kept us from actually
+        // knowing that it is.
+        [DataRow("16a596ae-edd3-4847-99fe-c4518e82c86f", 2, 4, true, DisplayName = "Lennon, John - depth:2")]
+        [DataRow("16a596ae-edd3-4847-99fe-c4518e82c86f", 1, 2, true, DisplayName = "Lennon, John - depth:1")]
+        [DataRow("03aa1462-ffa9-4978-901b-7c001562cf6f", 2, 2, false, DisplayName = "Ringo, Starr - depth:2")]
+        [DataRow("03aa1462-ffa9-4978-901b-7c001562cf6f", 1, 2, true, DisplayName = "Ringo, Starr - depth:1")]
+        [DataRow("b7839309-3348-463b-a7e3-5de1c168beb3", 2, 0, false, DisplayName = "McCartney, Paul - depth:2")]
+        [DataRow("b7839309-3348-463b-a7e3-5de1c168beb3", 1, 0, false, DisplayName = "McCartney, Paul - depth:1")]
+
+        public void GetReportingStructure_Returns_Truncated(string employeeId, int maxDepth, int expectedCount, bool expectedIsTruncated)
+        {
+            // Arrange
+            // Nothing to arrange here.
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/{employeeId}/structure?maxDepth={maxDepth}");
+            var response = getRequestTask.Result;
+
+            // Assert
+            using var scope = new AssertionScope();
+            response.StatusCode.Should().Be(HttpStatusCode.OK, "because we found the employeeId.");
+            var structure = response.DeserializeContent<ReportingStructure>();
+            structure.Employee.EmployeeId.Should().Be(employeeId, "because this was the requested employee.");
+            structure.NumberOfReports.Should().Be(expectedCount, "because that is total number of reports in the test data.");
+            structure.IsTruncated.Should().Be(expectedIsTruncated, "because the data has more ore less depth than the provided limit.");
         }
     }
 }

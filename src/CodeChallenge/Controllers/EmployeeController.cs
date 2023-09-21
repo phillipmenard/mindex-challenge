@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using CodeChallenge.Services;
@@ -48,7 +45,7 @@ namespace CodeChallenge.Controllers
         [HttpPut("{id}")]
         public IActionResult ReplaceEmployee(String id, [FromBody]Employee newEmployee)
         {
-            _logger.LogDebug($"Recieved employee update request for '{id}'");
+            _logger.LogDebug($"Received employee update request for '{id}'");
 
             var existingEmployee = _employeeService.GetById(id);
             if (existingEmployee == null)
@@ -57,6 +54,82 @@ namespace CodeChallenge.Controllers
             _employeeService.Replace(existingEmployee, newEmployee);
 
             return Ok(newEmployee);
+        }
+
+        /// <summary>
+        /// Retrieves the structure of the team starting at employee.EmployeeId = id.
+        /// </summary>
+        /// <param name="id">EmployeeId to start with.</param>
+        /// <param name="maxDepth">Maximum depth to walk to retrieve the information.</param>
+        /// <returns><see cref="ReportingStructure"/></returns>
+        [HttpGet("{id}/structure", Name = "getEmployeeReportingStructure")]
+        public IActionResult GetReportingStructure(String id, int maxDepth = 5)
+        {
+            _logger.LogDebug($"Received request for employee reporting structure for '{id}'");
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest("id is required");
+            }
+
+            // Limit the depth a user client request.
+            // Here 10 is chosen arbitrarily, but one should reflect a real-world concern.
+            // A value of 0 would always result in count 0, since self is not included.
+            if (maxDepth > 10 || maxDepth <= 0)
+            {
+                return BadRequest($"{nameof(maxDepth)} must be between 1 and 10, inclusive.");
+            }
+
+            var employee = _employeeService.GetById(id, nameof(Employee.DirectReports));
+            if (employee == null)
+            {
+                return NotFound();
+            }
+
+            var isTruncated = !this.TryCountReports(employee, maxDepth, 1, out var count);
+
+            // Count includes "self", so remove the top employee from the count.
+            count--;
+
+            // For now we'll exclude the actual structure as a plausible size concern.
+            // It was not requested explicitly in the work request.
+            employee.DirectReports = null;
+
+            return Ok(new ReportingStructure(employee, count, isTruncated));
+        }
+
+        /// <summary>
+        /// Counts each employee starting at the provided employee (so result is >=1)
+        ///  and all DirectReports recursively from there.
+        /// </summary>
+        /// <param name="employee"></param>
+        /// <returns>False if truncated due to depth.</returns>
+        private bool TryCountReports(Employee employee, int maxDepth, int depth, out int count)
+        {
+            // count self:
+            count = 1;
+
+            if (depth > maxDepth)
+            {
+                //Indicate depth issue.
+                return false;
+            }
+
+            //Enrich employees, as needed
+            if (employee.DirectReports == null)
+            {
+                employee = _employeeService.GetById(employee.EmployeeId, nameof(Employee.DirectReports));
+            }
+
+            var result = true;
+            foreach(var subordinate in employee.DirectReports)
+            {
+                if (!this.TryCountReports(subordinate, maxDepth, depth+1, out var subCount))
+                {
+                    result = false;
+                }
+                count += subCount;
+            }
+            return result;
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CodeChallenge.Models;
@@ -30,6 +29,24 @@ namespace CodeChallenge.Repositories
         public Employee GetById(string id)
         {
             return _employeeContext.Employees.SingleOrDefault(e => e.EmployeeId == id);
+        }
+
+        /// <inheritdoc/>
+        public Employee GetById(string id, params string[] additionalFields)
+        {
+            IQueryable<Employee> employees = _employeeContext.Employees;
+            foreach(var field in additionalFields)
+            {
+                try
+                {
+                    employees = employees.Include(field);
+                }
+                catch (Exception ex)
+                {
+                    throw new RepositoryException($"{field} is not a property of {nameof(Employee)}", ex);
+                }
+            }
+            return employees.SingleOrDefault(e => e.EmployeeId == id);
         }
 
         public Task SaveAsync()
